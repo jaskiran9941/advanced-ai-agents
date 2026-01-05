@@ -32,7 +32,7 @@ A sophisticated system with 4 specialized agents coordinated by an orchestrator:
 These projects build upon foundational work in other repositories:
 
 ```
-llm-apps ([Podcast summarizer](https://github.com/jaskiran9941/llm-apps/tree/main/podcast-summarizer) - Basic LLM Applications)
+llm-apps ([Podcast summarizer][podcast-summarizer] - Basic LLM Applications)
     ↓
 basic-ai-agents (Single Agentic Agents)
     ↓
@@ -143,3 +143,6 @@ These are educational projects demonstrating advanced multi-agent AI systems. Fe
 ## 📄 License
 
 Educational projects for learning advanced AI agent systems.
+
+
+[podcast-summarizer]: https://github.com/jaskiran9941/llm-apps/tree/main/podcast-summarizer
