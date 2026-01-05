@@ -1,0 +1,17 @@
+# Multi-Agent Podcast System - Dependencies
+
+# Core AI
+openai>=1.12.0
+
+# Web UI
+streamlit>=1.31.0
+
+# Podcast data
+feedparser>=6.0.10
+requests>=2.31.0
+
+# Database
+# (SQLite is built into Python)
+
+# Configuration
+python-dotenv>=1.0.0
