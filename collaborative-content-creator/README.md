@@ -1,4 +1,5 @@
 # Real-Time Collaborative Content Creator
+
 ## A Multi-Agent System for Learning Agent Memory & Collaboration
 
 This project demonstrates how multiple AI agents can collaborate on a complex task using **shared memory**, **consensus mechanisms**, and **role-based reasoning**. Perfect for learning about agent memory systems and multi-agent orchestration.
@@ -18,12 +19,14 @@ This project teaches you:
       5. ## 📚 The 36 Learning Points (Embedded in Code)
      
       6. ### Module: `config.py`
+     
       7. - **#1**: Configuration Management - Centralized settings for easy experimentation
          - - **#2**: Memory Storage Strategy - Vector DB, credibility scores, TTL
            - - **#3**: Agent-Specific Configurations - Each agent has different parameters
              - - **#4**: Consensus & Conflict Resolution - How to resolve agent disagreements
               
                - ### Module: `memory_manager.py` - The Heart of Collaboration
+              
                - - **#5**: Shared Agent Memory Architecture - Why persistent shared memory matters
                  - - **#6**: Credibility Scoring - Tracking source reliability
                    - - **#7**: Credibility Thresholding - Preventing low-quality info from polluting content
@@ -38,6 +41,7 @@ This project teaches you:
                                      - - **#16**: Memory Transparency - Exporting for debugging/analysis
                                       
                                        - ### Module: `agents.py` - The Team Players
+                                      
                                        - - **#17**: Agent Interface & Contract - Polymorphic design pattern
                                          - - **#18**: Role-Based Reasoning - Keeping agents focused on their role
                                            - - **#19**: Polymorphism in Multi-Agent Systems - Uniform interface, different behaviors
@@ -50,6 +54,7 @@ This project teaches you:
                                                          - - **#26**: Agent 4 - The Fact Checker - Validates claims (fact validation)
                                                           
                                                            - ### Module: `orchestrator.py` - The Conductor
+                                                          
                                                            - - **#27**: Orchestration Patterns - Central coordination of agents
                                                              - - **#28**: State Management - Tracking workflow state
                                                                - - **#29**: The Orchestrator Pattern - Why we need a coordinator
@@ -94,6 +99,7 @@ This project teaches you:
                                                                                ## 🔄 The Workflow
 
                                                                                ### Phase 1: RESEARCH
+
                                                                                ```python
                                                                                researcher.act({"topic": "AI agents"})
                                                                                # Output: Findings added to shared memory
@@ -101,13 +107,18 @@ This project teaches you:
                                                                                ```
 
                                                                                ### Phase 2: WRITING
+
                                                                                ```python
-                                                                               writer.act({"topic": "AI agents", "style": "professional"})
+                                                                               writer.act({
+                                                                                   "topic": "AI agents",
+                                                                                   "style": "professional"
+                                                                               })
                                                                                # Reads credible findings from memory
                                                                                # Creates draft using research
                                                                                ```
 
                                                                                ### Phase 3: REVIEW LOOP (Iterative)
+
                                                                                ```
                                                                                Round 1:
                                                                                  editor.act({"draft": draft})     # Reviews draft
@@ -124,6 +135,7 @@ This project teaches you:
                                                                                The **SharedMemory** class is where collaboration happens:
 
                                                                                ### What Gets Stored?
+
                                                                                ```
                                                                                Findings:
                                                                                  - content: "Multi-agent systems outperform single agents"
@@ -142,6 +154,7 @@ This project teaches you:
                                                                                ```
 
                                                                                ### Memory Operations
+
                                                                                ```python
                                                                                # Write
                                                                                memory.add_finding(finding)
@@ -166,11 +179,27 @@ This project teaches you:
                                                                                ## 🚀 Running the System
 
                                                                                ### Setup
+
                                                                                ```bash
-                                                                               python3 orchestrator.py
+                                                                               cd collaborative-content-creator
+                                                                               pip install -r requirements.txt
+                                                                               ```
+
+                                                                               ### Run with Shell Script (Easiest)
+
+                                                                               ```bash
+                                                                               chmod +x run_streamlit.sh
+                                                                               ./run_streamlit.sh
+                                                                               ```
+
+                                                                               ### Run Directly
+
+                                                                               ```bash
+                                                                               streamlit run streamlit_ui.py
                                                                                ```
 
                                                                                ### What You'll See
+
                                                                                ```
                                                                                ============================================================
                                                                                Starting content creation for topic: AI agents
@@ -201,22 +230,28 @@ This project teaches you:
 
                                                                                ## 🔑 Key Insights
 
-                                                                               ### 1. **Shared Memory is Central**
+                                                                               ### 1. Shared Memory is Central
+
                                                                                Without shared memory, agents can't learn from each other or avoid duplication. This is why it's the heart of the system.
 
-                                                                               ### 2. **Credibility Matters**
+                                                                               ### 2. Credibility Matters
+
                                                                                Not all sources are equal. By tracking credibility scores, agents can distinguish between reliable and unreliable information.
 
-                                                                               ### 3. **Consensus is Hard**
+                                                                               ### 3. Consensus is Hard
+
                                                                                When Agent A disputes Agent B's finding, we need a resolution strategy. This project shows multiple approaches:
+
                                                                                - Averaging scores
                                                                                - - Majority vote
                                                                                  - - Credibility-weighted voting
                                                                                   
-                                                                                   - ### 4. **Iteration Beats Perfection**
+                                                                                   - ### 4. Iteration Beats Perfection
+                                                                                  
                                                                                    - Rather than trying to get everything right in one pass, agents iterate with feedback. This mirrors real human workflows.
                                                                                   
-                                                                                   - ### 5. **Transparency Enables Debugging**
+                                                                                   - ### 5. Transparency Enables Debugging
+                                                                                  
                                                                                    - By logging every action and exporting memory, we can understand what went wrong and why.
                                                                                   
                                                                                    - ---
@@ -240,6 +275,7 @@ This project teaches you:
                                                                                                      10. After running, you'll see:
                                                                                                     
                                                                                                      11. ### Workflow Summary
+                                                                                                    
                                                                                                      12. ```
                                                                                                          WORKFLOW SUMMARY
                                                                                                          ============================================================
@@ -259,6 +295,7 @@ This project teaches you:
                                                                                                          ```
                                                                                                          
                                                                                                          ### Memory Export
+                                                                                                         
                                                                                                          ```json
                                                                                                          {
                                                                                                            "findings": [
@@ -297,12 +334,15 @@ This project teaches you:
                                                                                                                               
                                                                                                                               ## 🔗 Files
                                                                                                                               
-                                                                                                                              - `config.py` - All configuration and learning points #1-4
+                                                                                                                              - `config.py` - Configuration and learning points #1-4
                                                                                                                               - - `memory_manager.py` - Shared memory implementation, learning points #5-16
                                                                                                                                 - - `agents.py` - Individual agent definitions, learning points #17-26
                                                                                                                                   - - `orchestrator.py` - Coordination and workflow, learning points #27-36
-                                                                                                                                    - - `README.md` - This file
-                                                                                                                                     
-                                                                                                                                      - ---
-                                                                                                                                      
-                                                                                                                                      Built with ❤️ for learning multi-agent systems.
+                                                                                                                                    - - `streamlit_ui.py` - Interactive web UI
+                                                                                                                                      - - `requirements.txt` - Dependencies
+                                                                                                                                        - - `run_streamlit.sh` - Quick start script
+                                                                                                                                          - - `README.md` - This file
+                                                                                                                                           
+                                                                                                                                            - ---
+                                                                                                                                            
+                                                                                                                                            Built with ❤️ for learning multi-agent systems.
