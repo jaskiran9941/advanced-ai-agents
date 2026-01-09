@@ -13,60 +13,7 @@ This project teaches you:
 1. **Agent Memory Architecture** (#5-16) - How agents share and manage information
 2. 2. **Agent Design Patterns** (#17-26) - Building specialized agents with specific roles
    3. 3. **Orchestration & Consensus** (#27-36) - Coordinating multiple agents toward a goal
-     
-      4. ---
-     
-      5. ## 📚 The 36 Learning Points (Embedded in Code)
-     
-      6. ### Module: `config.py`
-     
-      7. - **#1**: Configuration Management - Centralized settings for easy experimentation
-         - - **#2**: Memory Storage Strategy - Vector DB, credibility scores, TTL
-           - - **#3**: Agent-Specific Configurations - Each agent has different parameters
-             - - **#4**: Consensus & Conflict Resolution - How to resolve agent disagreements
-              
-               - ### Module: `memory_manager.py` - The Heart of Collaboration
-              
-               - - **#5**: Shared Agent Memory Architecture - Why persistent shared memory matters
-                 - - **#6**: Credibility Scoring - Tracking source reliability
-                   - - **#7**: Credibility Thresholding - Preventing low-quality info from polluting content
-                     - - **#8**: Forgetting Strategy - Episodic vs semantic memory, TTL
-                       - - **#9**: Memory of Editorial Decisions - Institutional memory of what works
-                         - - **#10**: Shared Mutable State - The challenge of concurrent writes
-                           - - **#11**: Write Operations in Shared Memory - Adding findings safely
-                             - - **#12**: Read Operations with Filtering - Querying with constraints
-                               - - **#13**: Conflict Recording - How agents dispute findings
-                                 - - **#14**: Memory of What Works - Learning from past feedback
-                                   - - **#15**: Memory Introspection - Agents querying what the team knows
-                                     - - **#16**: Memory Transparency - Exporting for debugging/analysis
-                                      
-                                       - ### Module: `agents.py` - The Team Players
-                                      
-                                       - - **#17**: Agent Interface & Contract - Polymorphic design pattern
-                                         - - **#18**: Role-Based Reasoning - Keeping agents focused on their role
-                                           - - **#19**: Polymorphism in Multi-Agent Systems - Uniform interface, different behaviors
-                                             - - **#20**: Agent 1 - The Researcher - Knowledge generator (WRITES to memory)
-                                               - - **#21**: Check Memory Before Searching - Avoid redundant work
-                                                 - - **#22**: Agent 2 - The Writer - Content synthesizer (READS from memory)
-                                                   - - **#23**: Read from Shared Memory - How agents access findings
-                                                     - - **#24**: Agent 3 - The Editor - Quality gatekeeper (WRITES feedback)
-                                                       - - **#25**: Analyze Recurring Patterns - Learning from editorial history
-                                                         - - **#26**: Agent 4 - The Fact Checker - Validates claims (fact validation)
-                                                          
-                                                           - ### Module: `orchestrator.py` - The Conductor
-                                                          
-                                                           - - **#27**: Orchestration Patterns - Central coordination of agents
-                                                             - - **#28**: State Management - Tracking workflow state
-                                                               - - **#29**: The Orchestrator Pattern - Why we need a coordinator
-                                                                 - - **#30**: The Main Workflow Loop - Research → Write → Review → Revise cycle
-                                                                   - - **#31**: Consensus Mechanism - Combining feedback from multiple agents
-                                                                     - - **#32**: Revision Strategy - How agents improve based on feedback
-                                                                       - - **#33**: Workflow Logging - Debugging and transparency
-                                                                         - - **#34**: Memory Introspection - Export and analyze collective knowledge
-                                                                           - - **#35**: Workflow Analysis - Summarizing agent contributions
-                                                                             - - **#36**: Demo/Testing - Simple examples to understand the system
-                                                                              
-                                                                               - ---
+    
 
                                                                                ## 🏗️ System Architecture
 
