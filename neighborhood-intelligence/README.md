@@ -29,7 +29,7 @@ graph TD
     Schools --> Synthesis
     Safety --> Synthesis
     
-    Synthesis[📋 Collaborative Synthesis] --> Report[Final "Day in the Life" Report]
+    Synthesis[📋 Collaborative Synthesis] --> Report["Final Day in the Life Report"]
 ```
 
 ### The Agent Team
