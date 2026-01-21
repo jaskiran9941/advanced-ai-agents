@@ -81,29 +81,29 @@ An ICP is a detailed description of the perfect customer for a product. It inclu
 Create a highly specific, realistic ICP based on the provided information.
 
 Format your response as JSON with this exact structure:
-{
-  "demographics": {
+{{
+  "demographics": {{
     "age_range": "...",
     "gender": "...",
     "income": "...",
     "education": "...",
     "location": "..."
-  },
-  "psychographics": {
+  }},
+  "psychographics": {{
     "values": ["value1", "value2"],
     "interests": ["interest1", "interest2"],
     "lifestyle": "..."
-  },
-  "behaviors": {
+  }},
+  "behaviors": {{
     "buying_patterns": "...",
     "media_consumption": ["platform1", "platform2"],
     "tech_savviness": "..."
-  },
+  }},
   "pain_points": ["pain1", "pain2", "pain3"],
   "goals": ["goal1", "goal2", "goal3"],
   "decision_criteria": ["criterion1", "criterion2"],
   "confidence_score": 0.85
-}
+}}
 
 The confidence_score should be between 0.0 and 1.0, representing how well-defined this ICP is based on available data."""
 

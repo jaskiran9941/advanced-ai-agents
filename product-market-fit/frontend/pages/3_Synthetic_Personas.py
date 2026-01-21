@@ -3,8 +3,33 @@ Page 3: Synthetic Personas & Chat
 """
 import streamlit as st
 import sys
+import base64
 sys.path.append('..')
 from utils.api_client import APIClient
+
+
+def get_image_base64(uploaded_file):
+    """Convert uploaded file to base64"""
+    bytes_data = uploaded_file.getvalue()
+    return base64.b64encode(bytes_data).decode('utf-8')
+
+
+def get_media_type(uploaded_file):
+    """Get media type from uploaded file"""
+    file_type = uploaded_file.type
+    if file_type:
+        return file_type
+    # Fallback based on extension
+    name = uploaded_file.name.lower()
+    if name.endswith('.png'):
+        return 'image/png'
+    elif name.endswith('.jpg') or name.endswith('.jpeg'):
+        return 'image/jpeg'
+    elif name.endswith('.gif'):
+        return 'image/gif'
+    elif name.endswith('.webp'):
+        return 'image/webp'
+    return 'image/png'
 
 st.set_page_config(page_title="Synthetic Personas", page_icon="👥", layout="wide")
 
@@ -77,6 +102,7 @@ try:
 
                 # Initialize chat session for this persona
                 chat_key = f"chat_{persona['id']}"
+                upload_key = f"upload_{persona['id']}"
                 if chat_key not in st.session_state:
                     st.session_state[chat_key] = {
                         "session_id": None,
@@ -87,6 +113,8 @@ try:
                 for msg in st.session_state[chat_key]["messages"]:
                     with st.chat_message("user"):
                         st.write(msg["user"])
+                        if msg.get("has_images"):
+                            st.caption("📎 Attached image(s)")
                     with st.chat_message("assistant"):
                         st.write(msg["assistant"])
                         if msg.get("sentiment"):
@@ -98,17 +126,44 @@ try:
                             }
                             st.caption(f"Sentiment: {sentiment_emoji.get(msg['sentiment'], '😐')} {msg['sentiment']}")
 
+                # Image upload section
+                uploaded_files = st.file_uploader(
+                    f"📎 Attach images (designs, mockups, etc.)",
+                    type=['png', 'jpg', 'jpeg', 'gif', 'webp'],
+                    accept_multiple_files=True,
+                    key=upload_key
+                )
+
+                # Show uploaded image previews
+                if uploaded_files:
+                    cols = st.columns(min(len(uploaded_files), 4))
+                    for idx, file in enumerate(uploaded_files):
+                        with cols[idx % 4]:
+                            st.image(file, caption=file.name, width=100)
+
                 # Chat input
                 user_message = st.chat_input(f"Message {persona['name']}...", key=f"input_{persona['id']}")
 
                 if user_message:
                     with st.spinner(f"{persona['name']} is typing..."):
                         try:
-                            # Send message
+                            # Prepare images if uploaded
+                            images = None
+                            if uploaded_files:
+                                images = [
+                                    {
+                                        "data": get_image_base64(f),
+                                        "media_type": get_media_type(f)
+                                    }
+                                    for f in uploaded_files
+                                ]
+
+                            # Send message with optional images
                             response = st.session_state.api_client.send_message(
                                 persona_id=persona['id'],
                                 message=user_message,
-                                session_id=st.session_state[chat_key]["session_id"]
+                                session_id=st.session_state[chat_key]["session_id"],
+                                images=images
                             )
 
                             # Update session ID
@@ -119,7 +174,8 @@ try:
                                 "user": user_message,
                                 "assistant": response.get("response"),
                                 "sentiment": response.get("sentiment"),
-                                "topics": response.get("topics", [])
+                                "topics": response.get("topics", []),
+                                "has_images": bool(images)
                             })
 
                             st.rerun()

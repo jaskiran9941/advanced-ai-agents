@@ -282,3 +282,33 @@ def get_workflow_status(idea_id: int, workflow_type: str) -> Optional[Dict]:
                 data['output_state'] = json.loads(data['output_state'])
             return data
         return None
+
+
+def update_workflow_progress(workflow_id: int, current_step: str, progress_percent: int, step_message: str = None):
+    """Update workflow progress"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """UPDATE workflow_executions
+            SET current_step = ?, progress_percent = ?, step_message = ?
+            WHERE id = ?""",
+            (current_step, progress_percent, step_message, workflow_id)
+        )
+        conn.commit()
+
+
+def get_workflow_progress(idea_id: int, workflow_type: str) -> Optional[Dict]:
+    """Get workflow progress for polling"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT id, status, current_step, progress_percent, step_message, error_message
+            FROM workflow_executions
+            WHERE idea_id = ? AND workflow_type = ?
+            ORDER BY started_at DESC LIMIT 1""",
+            (idea_id, workflow_type)
+        )
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+        return None

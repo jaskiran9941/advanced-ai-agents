@@ -46,23 +46,29 @@ class BaseAgent(ABC):
         messages: List[Dict],
         system: str = None,
         max_tokens: int = 4096,
-        temperature: float = 1.0
+        temperature: float = 1.0,
+        images: List[Dict] = None
     ) -> str:
-        """Unified LLM calling interface"""
+        """Unified LLM calling interface with optional image support"""
         if self.provider == "anthropic":
-            return self._call_anthropic(messages, system, max_tokens, temperature)
+            return self._call_anthropic(messages, system, max_tokens, temperature, images)
         else:
-            return self._call_openai(messages, system, max_tokens, temperature)
+            return self._call_openai(messages, system, max_tokens, temperature, images)
 
     def _call_anthropic(
         self,
         messages: List[Dict],
         system: str = None,
         max_tokens: int = 4096,
-        temperature: float = 1.0
+        temperature: float = 1.0,
+        images: List[Dict] = None
     ) -> str:
-        """Call Anthropic Claude"""
+        """Call Anthropic Claude with optional image support"""
         try:
+            # If images provided, modify the last user message to include them
+            if images:
+                messages = self._add_images_to_messages_anthropic(messages, images)
+
             kwargs = {
                 "model": self.model,
                 "max_tokens": max_tokens,
@@ -78,15 +84,49 @@ class BaseAgent(ABC):
             self._log(f"Anthropic API error: {e}")
             raise
 
+    def _add_images_to_messages_anthropic(self, messages: List[Dict], images: List[Dict]) -> List[Dict]:
+        """Add images to the last user message for Anthropic format"""
+        if not messages:
+            return messages
+
+        messages = messages.copy()
+        last_msg = messages[-1].copy()
+
+        if last_msg.get("role") == "user":
+            # Build content array with images and text
+            content = []
+            for img in images:
+                content.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": img.get("media_type", "image/png"),
+                        "data": img.get("data")
+                    }
+                })
+            content.append({
+                "type": "text",
+                "text": last_msg.get("content", "")
+            })
+            last_msg["content"] = content
+            messages[-1] = last_msg
+
+        return messages
+
     def _call_openai(
         self,
         messages: List[Dict],
         system: str = None,
         max_tokens: int = 4096,
-        temperature: float = 1.0
+        temperature: float = 1.0,
+        images: List[Dict] = None
     ) -> str:
-        """Call OpenAI GPT"""
+        """Call OpenAI GPT with optional image support"""
         try:
+            # If images provided, modify the last user message to include them
+            if images:
+                messages = self._add_images_to_messages_openai(messages, images)
+
             # Add system message if provided
             if system:
                 messages = [{"role": "system", "content": system}] + messages
@@ -101,6 +141,29 @@ class BaseAgent(ABC):
         except Exception as e:
             self._log(f"OpenAI API error: {e}")
             raise
+
+    def _add_images_to_messages_openai(self, messages: List[Dict], images: List[Dict]) -> List[Dict]:
+        """Add images to the last user message for OpenAI format"""
+        if not messages:
+            return messages
+
+        messages = messages.copy()
+        last_msg = messages[-1].copy()
+
+        if last_msg.get("role") == "user":
+            # Build content array with text and images
+            content = [{"type": "text", "text": last_msg.get("content", "")}]
+            for img in images:
+                content.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{img.get('media_type', 'image/png')};base64,{img.get('data')}"
+                    }
+                })
+            last_msg["content"] = content
+            messages[-1] = last_msg
+
+        return messages
 
     def _log(self, message: str):
         """Log messages"""

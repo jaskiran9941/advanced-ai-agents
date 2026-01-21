@@ -47,7 +47,8 @@ class PersonaChatAgent(BaseAgent):
             input_data: {
                 "persona": Dict,  # Persona profile
                 "message": str,   # User message
-                "history": List[Dict]  # Conversation history (optional)
+                "history": List[Dict],  # Conversation history (optional)
+                "images": List[Dict]  # Optional images [{data: base64, media_type: str}]
             }
 
         Returns:
@@ -70,16 +71,24 @@ class PersonaChatAgent(BaseAgent):
         persona = input_data.get("persona")
         user_message = input_data.get("message")
         history = input_data.get("history", [])
+        images = input_data.get("images", [])
         refinement_feedback = input_data.get("refinement_feedback", [])
 
         self._log(f"Chatting as {persona.get('name')}")
+        if images:
+            self._log(f"📷 Processing {len(images)} image(s)")
 
         # Build system prompt from persona details
         refinement_context = ""
         if refinement_feedback:
             refinement_context = "\n\nIMPORTANT - Previous response was inconsistent. Adjust:\n" + "\n".join(f"- {feedback}" for feedback in refinement_feedback)
 
-        system_prompt = self._build_persona_system_prompt(persona) + refinement_context
+        # Add image context to system prompt if images present
+        image_context = ""
+        if images:
+            image_context = "\n\nThe user has shared image(s) with you. Analyze them carefully and provide feedback based on your persona's perspective, expertise, and preferences. Be specific about what you see and give honest, constructive feedback."
+
+        system_prompt = self._build_persona_system_prompt(persona) + refinement_context + image_context
 
         # Build conversation history
         messages = []
@@ -91,7 +100,7 @@ class PersonaChatAgent(BaseAgent):
         messages.append({"role": "user", "content": user_message})
 
         try:
-            response_text = self._call_llm(messages, system=system_prompt, temperature=0.8)
+            response_text = self._call_llm(messages, system=system_prompt, temperature=0.8, images=images if images else None)
 
             # Analyze sentiment
             sentiment = self._analyze_sentiment(response_text)

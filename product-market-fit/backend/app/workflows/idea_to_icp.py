@@ -25,9 +25,22 @@ def execute_research_with_retry(state: IdeaToICPState) -> IdeaToICPState:
     """
     print(f"[Workflow] 🔍 Executing agentic research for: {state['idea_name']}")
 
+    # Get workflow_id from database based on idea_id
+    idea_id = state["idea_id"]
+    workflow = crud.get_workflow_progress(idea_id, "idea_to_icp")
+    workflow_id = workflow.get("id") if workflow else None
+
+    # Update progress: Research starting
+    if workflow_id:
+        crud.update_workflow_progress(workflow_id, "researching", 15, "🔍 Searching the web for market data...")
+
     research_agent = ResearchAgent()
 
     try:
+        # Update progress: Analyzing
+        if workflow_id:
+            crud.update_workflow_progress(workflow_id, "researching", 30, "📊 Analyzing competitors and market trends...")
+
         # Use agentic execution with retry and validation
         research = research_agent.execute_with_retry({
             "concept": state["idea_description"],
@@ -42,6 +55,10 @@ def execute_research_with_retry(state: IdeaToICPState) -> IdeaToICPState:
             print(f"[Workflow] Research completed in {research['_iterations_used']} iterations")
             print(f"[Workflow] Final confidence: {research['_final_confidence']:.2f}")
 
+        # Update progress: Research done
+        if workflow_id:
+            crud.update_workflow_progress(workflow_id, "research_complete", 50, "✅ Market research complete!")
+
         # Save to database
         crud.save_research(state["idea_id"], research)
 
@@ -50,6 +67,8 @@ def execute_research_with_retry(state: IdeaToICPState) -> IdeaToICPState:
     except Exception as e:
         state["errors"].append(f"Research failed: {str(e)}")
         state["current_step"] = "research_failed"
+        if workflow_id:
+            crud.update_workflow_progress(workflow_id, "research_failed", 30, f"❌ Research failed: {str(e)}")
         return state
 
 
@@ -64,9 +83,22 @@ def create_icp_with_validation(state: IdeaToICPState) -> IdeaToICPState:
     """
     print(f"[Workflow] 🎯 Creating ICP with quality validation")
 
+    # Get workflow_id from database based on idea_id
+    idea_id = state["idea_id"]
+    workflow = crud.get_workflow_progress(idea_id, "idea_to_icp")
+    workflow_id = workflow.get("id") if workflow else None
+
+    # Update progress: ICP starting
+    if workflow_id:
+        crud.update_workflow_progress(workflow_id, "creating_icp", 60, "🎯 Creating Ideal Customer Profile...")
+
     icp_agent = ICPAgent()
 
     try:
+        # Update progress
+        if workflow_id:
+            crud.update_workflow_progress(workflow_id, "creating_icp", 75, "👤 Defining customer demographics and behaviors...")
+
         # Use agentic execution with retry and validation
         icp = icp_agent.execute_with_retry({
             "concept": state["idea_description"],
@@ -87,6 +119,9 @@ def create_icp_with_validation(state: IdeaToICPState) -> IdeaToICPState:
             # Save to database
             crud.save_icp(state["idea_id"], icp)
             crud.update_idea_status(state["idea_id"], "icp_complete")
+
+            if workflow_id:
+                crud.update_workflow_progress(workflow_id, "icp_complete", 95, "✅ ICP created successfully!")
         else:
             state["current_step"] = "icp_low_quality"
             print(f"[Workflow] ⚠️  ICP quality gate failed: {final_confidence:.2f} < {min_confidence:.2f}")
@@ -98,6 +133,9 @@ def create_icp_with_validation(state: IdeaToICPState) -> IdeaToICPState:
             crud.save_icp(state["idea_id"], icp)
             crud.update_idea_status(state["idea_id"], "icp_low_quality")
 
+            if workflow_id:
+                crud.update_workflow_progress(workflow_id, "icp_complete", 95, "⚠️ ICP created (low confidence)")
+
         # Log reasoning trace
         if "_reasoning_trace" in icp:
             print(f"[Workflow] ICP completed in {icp['_iterations_used']} iterations")
@@ -107,6 +145,8 @@ def create_icp_with_validation(state: IdeaToICPState) -> IdeaToICPState:
     except Exception as e:
         state["errors"].append(f"ICP creation failed: {str(e)}")
         state["current_step"] = "icp_failed"
+        if workflow_id:
+            crud.update_workflow_progress(workflow_id, "icp_failed", 60, f"❌ ICP creation failed: {str(e)}")
         return state
 
 
@@ -166,14 +206,18 @@ def build_idea_to_icp_workflow():
     return workflow.compile()
 
 
-def run_idea_to_icp_workflow(idea_id: int):
-    """Run the complete workflow"""
+def run_idea_to_icp_workflow(idea_id: int, workflow_id: int = None):
+    """Run the complete workflow with progress tracking"""
     print(f"[Workflow] Starting Idea → ICP workflow for idea {idea_id}")
 
     # Get idea from database
     idea = crud.get_idea(idea_id)
     if not idea:
         raise ValueError(f"Idea {idea_id} not found")
+
+    # Update progress: Starting
+    if workflow_id:
+        crud.update_workflow_progress(workflow_id, "starting", 10, "🚀 Initializing research workflow...")
 
     # Initialize state
     initial_state: IdeaToICPState = {
@@ -184,7 +228,8 @@ def run_idea_to_icp_workflow(idea_id: int):
         "research_findings": None,
         "icp_profile": None,
         "current_step": "starting",
-        "errors": []
+        "errors": [],
+        "_workflow_id": workflow_id
     }
 
     # Build and run workflow
@@ -193,8 +238,15 @@ def run_idea_to_icp_workflow(idea_id: int):
     try:
         final_state = workflow.invoke(initial_state)
         print(f"[Workflow] Completed with status: {final_state['current_step']}")
+
+        # Update progress: Complete
+        if workflow_id:
+            crud.update_workflow_progress(workflow_id, "completed", 100, "✅ Research and ICP creation complete!")
+
         return final_state
 
     except Exception as e:
         print(f"[Workflow] Failed: {e}")
+        if workflow_id:
+            crud.update_workflow_progress(workflow_id, "failed", 0, f"❌ Error: {str(e)}")
         raise
