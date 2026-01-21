@@ -43,21 +43,46 @@ except Exception as e:
 
 st.markdown("---")
 
-# Start research button
-if st.button("🚀 Start AI Research", use_container_width=True, type="primary"):
-    with st.spinner("AI agents are researching your market... This may take 30-60 seconds."):
-        try:
-            result = st.session_state.api_client.start_research(idea_id)
-            st.success("Research started!")
+# Check if research is in progress
+def check_progress():
+    """Check research progress and return status"""
+    try:
+        progress = st.session_state.api_client.get_research_progress(idea_id)
+        return progress
+    except:
+        return None
 
-            # Wait a bit and check for results
-            time.sleep(5)
+# Show progress if research is running
+progress = check_progress()
+is_running = progress and progress.get("status") == "running"
 
-            # Refresh page to show results
-            st.rerun()
+# Start research button (disabled if already running)
+if st.button("🚀 Start AI Research", use_container_width=True, type="primary", disabled=is_running):
+    try:
+        result = st.session_state.api_client.start_research(idea_id)
+        st.rerun()
+    except Exception as e:
+        st.error(f"Error starting research: {e}")
 
-        except Exception as e:
-            st.error(f"Error starting research: {e}")
+# Show progress bar if research is running
+if is_running:
+    st.markdown("### 🔄 Research in Progress")
+
+    progress_percent = progress.get("progress_percent", 0)
+    step_message = progress.get("step_message", "Processing...")
+
+    # Progress bar
+    progress_bar = st.progress(progress_percent / 100)
+    st.markdown(f"**{step_message}**")
+    st.caption(f"{progress_percent}% complete")
+
+    # Auto-refresh every 2 seconds
+    time.sleep(2)
+    st.rerun()
+
+# Show completion message
+elif progress and progress.get("status") == "completed":
+    st.success("✅ Research workflow completed!")
 
 # Try to load research results
 st.markdown("### Research Results")

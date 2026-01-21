@@ -50,6 +50,11 @@ class APIClient:
         response.raise_for_status()
         return response.json()
 
+    def get_research_progress(self, idea_id: int) -> Dict:
+        response = requests.get(f"{self.base_url}/api/research/progress/{idea_id}")
+        response.raise_for_status()
+        return response.json()
+
     # Personas
     def generate_personas(self, idea_id: int, num_personas: int = 3) -> Dict:
         response = requests.post(
@@ -75,10 +80,22 @@ class APIClient:
         response.raise_for_status()
         return response.json()
 
-    def send_message(self, persona_id: int, message: str, session_id: str = None) -> Dict:
+    def send_message(self, persona_id: int, message: str, session_id: str = None, images: list = None) -> Dict:
+        """Send a message to a persona, optionally with images
+
+        Args:
+            persona_id: The persona to chat with
+            message: The text message
+            session_id: Optional session ID for conversation continuity
+            images: Optional list of dicts with 'data' (base64) and 'media_type'
+        """
+        payload = {"message": message, "session_id": session_id}
+        if images:
+            payload["images"] = images
+
         response = requests.post(
             f"{self.base_url}/api/chat/message/{persona_id}",
-            json={"message": message, "session_id": session_id}
+            json=payload
         )
         response.raise_for_status()
         return response.json()

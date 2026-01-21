@@ -21,6 +21,9 @@ class IdeaToICPState(TypedDict):
     current_step: str
     errors: List[str]
 
+    # Progress tracking
+    _workflow_id: Optional[int]
+
 
 class ICPToPersonasState(TypedDict):
     """State for ICP → Persona Generation workflow"""
