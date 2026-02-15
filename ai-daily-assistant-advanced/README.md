@@ -10,7 +10,7 @@ An AI-powered Slack bot that analyzes your Gmail emails and answers questions us
 - **Multi-Channel Support**: 🆕 Streamlit, Slack, and WhatsApp interfaces
 - **Gmail Analysis**: Search, read, and analyze emails via natural language (5 tools)
 - **Financial Analysis**: 🆕 Extract receipts and track spending from emails (3 tools)
-- **Calendar Integration**: 🆕 Optional Composio integration for Google Calendar (2 tools)
+- **Calendar Integration**: 🆕 Optional Composio integration for Google Calendar (2 tools) 
 - **Multi-Provider AI**: Support for both Anthropic Claude and OpenAI GPT-4
 - **Hybrid Tool Architecture**: Custom tools + 150+ Composio tools (optional)
 - **Production-Ready WhatsApp**: Message splitting, session cleanup, signature validation
