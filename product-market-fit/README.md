@@ -6,7 +6,7 @@
 
 ---
 
-## 🎯 What This Platform Does
+## 🎯 What This Platform Does 
 
 This platform helps you validate product ideas **before** building them by:
 
