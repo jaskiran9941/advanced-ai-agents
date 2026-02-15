@@ -11,7 +11,7 @@ This project represents the **third iteration** in a learning progression:
 ```
 llm-apps/podcast-summarizer (Basic LLM)
     ↓
-basic-ai-agents/agentic-podcast-summarizer (Single Agentic Agent)
+basic-ai-agents/agentic-podcast-summarizer (Single Agentic Agent) 
     ↓
 basic-ai-agents/multi-agent-podcast-system (Multi-Agent System) ← You are here
 ```
