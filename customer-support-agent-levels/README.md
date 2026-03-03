@@ -1,8 +1,8 @@
-# Customer Support Agent — 10 Levels of Agentic Software
+# Customer Support Agent — 11 Levels of Agentic Software
 
-A single Customer Support Bot for "Acme Shop" (fictional electronics retailer), built 10 times. Each level adds exactly one capability and hits a natural wall — solved only in the next level.
+A single Customer Support Bot for "Acme Shop" (fictional electronics retailer), built 11 times. Each level adds exactly one capability and hits a natural wall — solved only in the next level.
 
-**Stack:** Python · Streamlit · Anthropic SDK (`claude-sonnet-4-6`) · ChromaDB · SQLite
+**Stack:** Python · Streamlit · Anthropic SDK (`claude-sonnet-4-6`) · ChromaDB · SQLite · LangGraph (L7)
 **UI pattern:** Two-column layout — left: chat, right: Agent Internals (every tool call + decision visible)
 
 ---
@@ -16,11 +16,12 @@ A single Customer Support Bot for "Acme Shop" (fictional electronics retailer), 
 | [L2: Multi-Tool](./level2_multi_tool/) | 4 more tools: return, inventory, email, profile | Policy answers are guesses from training data |
 | [L3: Knowledge/RAG](./level3_knowledge/) | ChromaDB policy docs + `search_policies` tool | Knows policy accurately, knows nothing about the customer |
 | [L4: Learning/Memory](./level4_learning/) | SQLite interaction history across sessions | Capable but uncontrolled — no auth, no refund limits, no guardrails |
-| L5: Reflection | Self-critique loop after each response | — |
-| L6: Multi-Agent | Orchestrator + specialist agents | — |
-| L7: Guardrails | Refund limits, confidence scoring, escalation | — |
-| L8: Eval/Observability | Tracer, metrics dashboard, cost tracking | — |
-| L9: Goal Decomposition | Planner with sub-goal tracking + replan | — |
+| [L5: Reflection](./level5_reflection/) | Self-critique loop, up to 3 attempts per response | Reflection tax — pays for critic call even when draft was perfect |
+| [L6: Multi-Agent](./level6_multi_agent/) | Orchestrator + Billing/Shipping/Technical specialists | No guardrails — specialists act without limits or escalation |
+| L7: LangGraph | Rebuild L6 in LangGraph with shared state + human-in-the-loop approval | Framework hides internals — harder to debug when things break |
+| L8: Guardrails | Refund limits, confidence scoring, escalation policy | Guardrails work but are invisible — no way to measure if they help |
+| L9: Eval/Observability | Tracer, metrics dashboard, cost-per-ticket tracking | Fully observable but reactive — can't plan ahead on complex tickets |
+| L10: Goal Decomposition | Planner with explicit sub-goal list + replan on failure | — |
 
 ---
 
