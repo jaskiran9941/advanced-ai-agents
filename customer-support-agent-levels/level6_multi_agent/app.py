@@ -70,91 +70,115 @@ with col_internals:
 # ── Flow diagram builder ───────────────────────────────────────────────────────
 def build_flow_diagram(steps: list) -> str:
     """
-    Build a Graphviz DOT diagram from a turn's steps.
-    Shows: Customer → Orchestrator → Specialists → Tools → Synthesis → Customer
+    Sequential trace diagram — each step is a numbered node connected
+    top-to-bottom in execution order. Makes the sequence unambiguous.
     """
-    specialists_seen = []
-    tool_calls       = []   # list of (agent, tool, call_index)
-    has_synthesis    = any(s[0] == "synthesis" for s in steps)
+    nodes  = []
+    edges  = []
+    step_n = 0
+
+    def node_id(n):
+        return f"s{n}"
+
+    def add_node(label, shape, fill, font="white"):
+        nonlocal step_n
+        step_n += 1
+        nid = node_id(step_n)
+        nodes.append(
+            f'    {nid} [label="{step_n}. {label}" shape={shape} '
+            f'style="filled,rounded" fillcolor="{fill}" fontcolor="{font}"];'
+        )
+        return nid
+
+    prev = None
+
+    def connect(a, b, label="", color="#666", style="solid"):
+        edge = f'    {a} -> {b} [color="{color}" style={style}'
+        if label:
+            edge += f' label="  {label}  "'
+        edge += "];'
+        edges.append(edge)
+
+    # ── Walk the steps in order ──────────────────────────────────────────
+    prev = add_node("Customer sends ticket", "oval", "#4a9eff")
 
     for event_type, data in steps:
-        if event_type == "specialist_start":
-            if data["agent"] not in specialists_seen:
-                specialists_seen.append(data["agent"])
+
+        if event_type == "routing":
+            cur = add_node(
+                f"Orchestrator\\nDecides routing\\n({data['input_tokens']}+{data['output_tokens']} tokens)",
+                "diamond", "#f9a825", "white"
+            )
+            connect(prev, cur, "ticket", "#4a9eff")
+            prev = cur
+
+        elif event_type == "route_decision":
+            specs = ", ".join(data["specialists"])
+            cur = add_node(f"Route to:\\n{specs}", "note", "#ffeaa7", "#2d3436")
+            connect(prev, cur, "", "#f9a825")
+            prev = cur
+
+        elif event_type == "specialist_start":
+            agent = data["agent"]
+            color = AGENT_COLORS.get(agent, "#888")
+            icon  = AGENT_ICONS.get(agent, "🤖")
+            cur = add_node(f"{icon} {agent.title()} Agent\\nstarts", "box", color)
+            connect(prev, cur, "dispatch", color)
+            prev = cur
+
         elif event_type == "tool_call":
-            tool_calls.append((data["agent"], data["tool"]))
+            agent = data["agent"]
+            tool  = data["tool"]
+            color = AGENT_COLORS.get(agent, "#888")
+            icon  = TOOL_ICONS.get(tool, "⚙️")
+            # Truncate input for label
+            inp   = str(data["input"])[:40] + ("…" if len(str(data["input"])) > 40 else "")
+            cur   = add_node(f"{icon} {tool}\\n{inp}", "component", "#f5f6fa", "#2d3436")
+            connect(prev, cur, "call", color)
+            prev = cur
+
+        elif event_type == "tool_result":
+            agent  = data["agent"]
+            color  = AGENT_COLORS.get(agent, "#888")
+            result = str(data["result"])[:45] + ("…" if len(str(data["result"])) > 45 else "")
+            cur    = add_node(f"↩ result\\n{result}", "note", "#dfe6e9", "#2d3436")
+            connect(prev, cur, "result", "#aaa", "dashed")
+            prev = cur
+
+        elif event_type == "specialist_done":
+            agent = data["agent"]
+            color = AGENT_COLORS.get(agent, "#888")
+            icon  = AGENT_ICONS.get(agent, "🤖")
+            cur   = add_node(f"{icon} {agent.title()} done\\nreturns prose to orchestrator", "box", color)
+            connect(prev, cur, "", color)
+            prev = cur
+
+        elif event_type == "synthesis":
+            cur = add_node(
+                f"Synthesis\\nCombines all responses\\n({data['input_tokens']}+{data['output_tokens']} tokens)",
+                "box", "#6c5ce7"
+            )
+            connect(prev, cur, "all outputs", "#6c5ce7")
+            prev = cur
+
+        elif event_type == "synthesis_skipped":
+            cur = add_node("Synthesis skipped\\n(single specialist)", "note", "#dfe6e9", "#2d3436")
+            connect(prev, cur, "", "#aaa")
+            prev = cur
+
+    # Final
+    final = add_node("Response sent to Customer", "oval", "#4a9eff")
+    connect(prev, final, "response", "#4a9eff")
 
     lines = [
         "digraph G {",
         '    rankdir=TB;',
-        '    splines=ortho;',
-        '    node [fontname="Helvetica" fontsize=11 margin="0.2,0.1"];',
+        '    splines=polyline;',
+        '    node [fontname="Helvetica" fontsize=10 margin="0.15,0.1" width=2.2];',
         '    edge [fontname="Helvetica" fontsize=9];',
         "",
-        "    // ── Nodes ──────────────────────────────────────",
-        '    customer [label="👤 Customer" shape=oval style=filled fillcolor="#4a9eff" fontcolor=white width=1.4];',
-        '    orchestrator [label="🧭 Orchestrator\\n(routing + synthesis)" shape=diamond style=filled fillcolor="#f9a825" fontcolor=white width=2.2];',
-    ]
+    ] + nodes + [""] + edges + ["}"]
 
-    # Specialist nodes
-    for spec in specialists_seen:
-        color = AGENT_COLORS.get(spec, "#888")
-        icon  = AGENT_ICONS.get(spec, "🤖")
-        lines.append(
-            f'    {spec} [label="{icon} {spec.title()} Agent" '
-            f'shape=box style="filled,rounded" fillcolor="{color}" fontcolor=white width=1.6];'
-        )
-
-    # Tool nodes (deduplicated per agent)
-    seen_tool_nodes = set()
-    for agent, tool in tool_calls:
-        node_id = f"{agent}_{tool}"
-        if node_id not in seen_tool_nodes:
-            icon = TOOL_ICONS.get(tool, "⚙️")
-            lines.append(
-                f'    {node_id} [label="{icon} {tool}" '
-                f'shape=component style=filled fillcolor="#f5f6fa" fontcolor="#2d3436" width=1.8];'
-            )
-            seen_tool_nodes.add(node_id)
-
-    # Synthesis node
-    if has_synthesis:
-        lines.append(
-            '    synthesis [label="🔄 Synthesis" shape=box style="filled,rounded" '
-            'fillcolor="#6c5ce7" fontcolor=white width=1.4];'
-        )
-
-    lines.append("")
-    lines.append("    // ── Edges ──────────────────────────────────────")
-
-    # Customer → Orchestrator
-    lines.append('    customer -> orchestrator [label="  ticket  " color="#4a9eff"];')
-
-    # Orchestrator → Specialists
-    for spec in specialists_seen:
-        color = AGENT_COLORS.get(spec, "#888")
-        lines.append(f'    orchestrator -> {spec} [label="  route  " color="{color}"];')
-
-    # Specialist → Tools → back
-    for agent, tool in tool_calls:
-        node_id = f"{agent}_{tool}"
-        color   = AGENT_COLORS.get(agent, "#888")
-        lines.append(f'    {agent} -> {node_id} [color="{color}"];')
-        lines.append(f'    {node_id} -> {agent} [style=dashed color=gray label="  result  "];')
-
-    # Specialists → Synthesis (or direct to customer)
-    if has_synthesis:
-        for spec in specialists_seen:
-            color = AGENT_COLORS.get(spec, "#888")
-            lines.append(f'    {spec} -> synthesis [color="{color}"];')
-        lines.append('    synthesis -> orchestrator [color="#6c5ce7" label="  combined  "];')
-        lines.append('    orchestrator -> customer [label="  response  " color="#4a9eff"];')
-    elif specialists_seen:
-        for spec in specialists_seen:
-            color = AGENT_COLORS.get(spec, "#888")
-            lines.append(f'    {spec} -> customer [label="  response  " color="{color}"];')
-
-    lines.append("}")
     return "\n".join(lines)
 
 
