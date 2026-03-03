@@ -137,7 +137,7 @@ def save_interaction(customer_id: str, messages: list) -> dict:
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"), max_retries=5)
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=256,
+        max_tokens=512,
         system=EXTRACTION_PROMPT,
         messages=[{"role": "user", "content": f"Conversation:\n{transcript}"}],
     )
