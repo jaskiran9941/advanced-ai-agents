@@ -39,7 +39,7 @@ def run_agent(messages: list, on_step=None) -> str:
     Returns:
         The assistant's final text reply as a string.
     """
-    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"), max_retries=5)
 
     # We'll keep looping until Claude stops asking for tools
     loop_count = 0
@@ -49,7 +49,7 @@ def run_agent(messages: list, on_step=None) -> str:
 
         # ── Step 1: Call Claude ───────────────────────────────────────────
         response = client.messages.create(
-            model="claude-opus-4-6",
+            model="claude-sonnet-4-6",
             max_tokens=1024,
             system=SYSTEM_PROMPT,
             tools=TOOL_SCHEMAS,      # <-- this is new vs Level 0

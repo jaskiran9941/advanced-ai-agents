@@ -77,7 +77,7 @@ if user_input:
     # Log to internals
     st.session_state.internals.append(f"**User message received**\n\n> {user_input}")
     st.session_state.internals.append(
-        f"**LLM call** → `claude-opus-4-6`\n\n"
+        f"**LLM call** → `claude-sonnet-4-6`\n\n"
         f"- System prompt: Acme Shop support agent\n"
         f"- Messages in context: {len(st.session_state.messages)}\n"
         f"- Tools: **none**\n"
@@ -85,9 +85,9 @@ if user_input:
     )
 
     # Call Claude
-    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"), max_retries=5)
     response = client.messages.create(
-        model="claude-opus-4-6",
+        model="claude-sonnet-4-6",
         max_tokens=1024,
         system=SYSTEM_PROMPT,
         messages=st.session_state.messages,

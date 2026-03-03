@@ -7,9 +7,10 @@ What works:  Full end-to-end support flow in one conversation.
              Claude chains 3-5 tools without being told the order.
              Watch the internals panel — implicit planning made visible.
 
-The wall:    Restart the app. Ask "What did you help me with just now?" → blank.
-             Every session starts with messages = []. No history, no context.
-             The agent is stateless between sessions.
+The wall:    Ask any policy question: "Can I return after 45 days?" or "What's the warranty?"
+             Claude has no access to Acme's actual policy docs — it improvises an answer
+             from training data. It might be plausible, but it's a guess. It's not Acme's
+             real policy. That's the hallucination risk L3 fixes.
 
 Run:  streamlit run level2_multi_tool/app.py
 """
@@ -33,7 +34,7 @@ with col_chat:
 
 with col_internals:
     st.title("Agent Internals")
-    st.caption("Watch Claude chain tools without being told the order")
+    st.caption("Watch implicit planning — and notice policy answers are guesses")
 
 # ── Session state ──────────────────────────────────────────────────────────────
 if "messages" not in st.session_state:
@@ -103,13 +104,13 @@ render_internals()
 
 # ── Suggested prompts ──────────────────────────────────────────────────────────
 with col_chat:
-    st.caption("Try these to see the tool chain — then restart and ask what you did last session:")
+    st.caption("Try the tool chain — then ask a policy question to hit the wall:")
     cols = st.columns(2)
     suggestions = [
         "I want to return order ORD-1001",
         "My order ORD-1004 arrived damaged, can I get a replacement?",
-        "Where is ORD-1002 and can I return it?",
-        "What did you help me with last time?",   # the wall
+        "Can I return my headphones after 45 days?",   # the wall — Claude will guess
+        "What's the warranty if my keyboard stops working?",  # the wall — Claude will guess
     ]
     for i, s in enumerate(suggestions):
         if cols[i % 2].button(s, key=f"sug_{i}"):

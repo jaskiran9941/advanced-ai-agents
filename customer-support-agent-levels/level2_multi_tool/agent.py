@@ -27,14 +27,14 @@ Guidelines:
 
 
 def run_agent(messages: list, on_step=None) -> str:
-    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"), max_retries=5)
     loop_count = 0
 
     while True:
         loop_count += 1
 
         response = client.messages.create(
-            model="claude-opus-4-6",
+            model="claude-sonnet-4-6",
             max_tokens=1024,
             system=SYSTEM_PROMPT,
             tools=TOOL_SCHEMAS,

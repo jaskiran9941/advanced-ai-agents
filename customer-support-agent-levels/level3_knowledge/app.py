@@ -36,7 +36,7 @@ with col_chat:
 
 with col_internals:
     st.title("Agent Internals")
-    st.caption("Watch policy retrieval vs. order lookups side by side")
+    st.caption("Policy answers: retrieved from docs (not guessed). But customer history: still blank.")
 
 # ── Session state ──────────────────────────────────────────────────────────────
 if "messages" not in st.session_state:
@@ -150,7 +150,16 @@ if user_input:
         if event_type == "llm_call":
             loop_tracker["count"] = data["loop"]
 
-    reply = run_agent(st.session_state.messages, on_step=on_step)
+    try:
+        reply = run_agent(st.session_state.messages, on_step=on_step)
+    except Exception as e:
+        if "overloaded" in str(e).lower() or "529" in str(e):
+            reply = "⚠️ The AI API is temporarily overloaded. Please try again in a few seconds."
+        else:
+            reply = f"⚠️ Unexpected error: {e}"
+        # Remove the user message so they can retry cleanly
+        st.session_state.messages.pop()
+
     st.session_state.steps.append(("final", {"loops": loop_tracker["count"]}))
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
