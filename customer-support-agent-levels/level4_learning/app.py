@@ -14,12 +14,13 @@ Flow:
 What works:  "I see you've had a delivery issue before — let me prioritise this."
              The agent knows the customer across sessions, not just within them.
 
-The wall:    Try a complex multi-part ticket:
-             "My order arrived damaged, the replacement was also wrong,
-              AND my account email is broken."
-             One agent, one context window — it handles all three but loses
-             track of sub-problems as the conversation gets longer.
-             That single-agent overload is what L5 (reflection) starts to fix.
+The wall:    The agent acts with zero safety checks.
+             - No authorization: log in as Marcus, ask about Sarah's order ORD-1001
+               → agent processes it, sends email to Sarah's address. No ownership check.
+             - No refund limits: ask for a $10,000 refund → agent will try to process it.
+             - No escalation policy: agent makes promises (replacements, refunds) with
+               no approval workflow and no confidence scoring.
+             Memory is working. Capability is working. Control is missing entirely.
 
 Run:  streamlit run level4_learning/app.py
 """
