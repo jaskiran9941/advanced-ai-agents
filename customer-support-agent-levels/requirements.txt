@@ -2,3 +2,4 @@ anthropic
 streamlit
 chromadb
 python-dotenv
+graphviz
