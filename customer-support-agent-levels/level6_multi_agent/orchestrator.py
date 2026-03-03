@@ -96,6 +96,7 @@ def synthesize(ticket: str, specialist_outputs: dict, client: anthropic.Anthropi
         on_step("synthesis", {
             "input_tokens": response.usage.input_tokens,
             "output_tokens": response.usage.output_tokens,
+            "specialist_outputs": specialist_outputs,   # what each specialist returned
         })
 
     return response.content[0].text
@@ -131,7 +132,11 @@ def run(ticket: str, customer_history: str = "", on_step=None) -> str:
         context = routing.get(f"{name}_context", "")
 
         if on_step:
-            on_step("specialist_start", {"agent": name})
+            on_step("specialist_start", {
+                "agent": name,
+                "ticket": ticket,           # original customer message
+                "context": context,         # what orchestrator told this specialist
+            })
 
         result = module.run(ticket, context=context, on_step=on_step)
         specialist_outputs[name] = result

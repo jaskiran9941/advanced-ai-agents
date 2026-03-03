@@ -209,6 +209,130 @@ def render_turn_steps(steps):
         st.divider()
 
 
+# ── Handoff inspector ─────────────────────────────────────────────────────────
+def render_handoffs(query: str, steps: list):
+    """
+    Sequential list of every handoff in the turn — what was passed and what
+    came back at each boundary. This is where gaps become visible:
+    - What context did the orchestrator actually give each specialist?
+    - What did each tool receive and return?
+    - What did each specialist return to the synthesizer?
+    - What got lost or invented between steps?
+    """
+    st.caption("Every handoff in sequence — expand any to see full content")
+
+    handoffs = []
+
+    # 1. Customer → Orchestrator
+    handoffs.append({
+        "from": "👤 Customer",
+        "to":   "🧭 Orchestrator",
+        "label": "Original ticket",
+        "content": query,
+        "gap_hint": None,
+    })
+
+    # 2. Routing result
+    routing_event = next((s[1] for s in steps if s[0] == "routing"), None)
+    if routing_event:
+        try:
+            routing_data = json.loads(routing_event["raw"])
+        except Exception:
+            routing_data = routing_event["raw"]
+        handoffs.append({
+            "from": "🧭 Orchestrator",
+            "to":   "🧭 Orchestrator (routing decision)",
+            "label": "Routing JSON returned",
+            "content": routing_data,
+            "gap_hint": "⚠️ Gap check: Does the context given to each specialist include enough to act? Or is it missing key info from the original ticket?",
+        })
+
+    # 3. Per-specialist: context passed in + tool calls + result back
+    current_agent = None
+    for event_type, data in steps:
+
+        if event_type == "specialist_start":
+            current_agent = data["agent"]
+            icon = AGENT_ICONS.get(current_agent, "🤖")
+            handoffs.append({
+                "from": "🧭 Orchestrator",
+                "to":   f"{icon} {current_agent.title()} Agent",
+                "label": f"Context passed to {current_agent}",
+                "content": {
+                    "ticket":  data.get("ticket", ""),
+                    "context": data.get("context", "(none — only raw ticket sent)"),
+                },
+                "gap_hint": "⚠️ Gap check: Does this agent know what OTHER specialists are doing or have done? No — it only sees what's here.",
+            })
+
+        elif event_type == "tool_call":
+            icon = TOOL_ICONS.get(data["tool"], "⚙️")
+            handoffs.append({
+                "from": f"{AGENT_ICONS.get(data['agent'], '🤖')} {data['agent'].title()} Agent",
+                "to":   f"{icon} {data['tool']}",
+                "label": "Tool input",
+                "content": data["input"],
+                "gap_hint": None,
+            })
+
+        elif event_type == "tool_result":
+            icon = TOOL_ICONS.get(data["tool"], "⚙️")
+            try:
+                result = ast.literal_eval(data["result"])
+            except Exception:
+                result = data["result"]
+            handoffs.append({
+                "from": f"{icon} {data['tool']}",
+                "to":   f"{AGENT_ICONS.get(data['agent'], '🤖')} {data['agent'].title()} Agent",
+                "label": "Tool result",
+                "content": result,
+                "gap_hint": None,
+            })
+
+        elif event_type == "specialist_done":
+            icon = AGENT_ICONS.get(data["agent"], "🤖")
+            handoffs.append({
+                "from": f"{icon} {data['agent'].title()} Agent",
+                "to":   "🧭 Orchestrator",
+                "label": f"{data['agent'].title()} response (prose string)",
+                "content": data["result"],
+                "gap_hint": "⚠️ Gap check: This is a prose string. The synthesizer reads it as text — hard facts (amounts, booleans, stock levels) can be softened or misread in the next step.",
+            })
+
+        elif event_type == "synthesis":
+            specialist_outputs = data.get("specialist_outputs", {})
+            handoffs.append({
+                "from": "🧭 Orchestrator",
+                "to":   "🔄 Synthesis",
+                "label": "All specialist outputs passed to synthesis",
+                "content": specialist_outputs,
+                "gap_hint": "⚠️ Gap check: The synthesizer gets prose strings, not structured data. It can hallucinate actions, soften refusals, or invent promises based on optimistic language patterns.",
+            })
+
+    # 4. Final
+    handoffs.append({
+        "from": "🔄 Synthesis" if any(s[0] == "synthesis" for s in steps) else "🤖 Specialist",
+        "to":   "👤 Customer",
+        "label": "Final response sent",
+        "content": "(see chat panel)",
+        "gap_hint": None,
+    })
+
+    # ── Render each handoff ──────────────────────────────────────────────
+    for i, h in enumerate(handoffs):
+        has_gap = h["gap_hint"] is not None
+        label_prefix = "⚠️ " if has_gap else f"{i+1}."
+        header = f"{label_prefix} {h['from']} → {h['to']}  |  _{h['label']}_"
+
+        with st.expander(header, expanded=False):
+            if has_gap:
+                st.warning(h["gap_hint"])
+            if isinstance(h["content"], (dict, list)):
+                st.json(h["content"])
+            else:
+                st.markdown(f"```\n{str(h['content'])[:800]}\n```")
+
+
 # ── Internals panel ────────────────────────────────────────────────────────────
 def render_internals():
     with col_internals:
@@ -227,7 +351,7 @@ def render_internals():
             is_latest = (i == 0)
 
             with st.expander(f"{'🟢' if is_latest else '⚪'} Q: {label}", expanded=is_latest):
-                tab_steps, tab_diagram = st.tabs(["📋 Steps", "🗺️ Flow Diagram"])
+                tab_steps, tab_diagram, tab_handoffs = st.tabs(["📋 Steps", "🗺️ Flow Diagram", "🔗 Handoffs"])
 
                 with tab_steps:
                     render_turn_steps(turn["steps"])
@@ -240,6 +364,9 @@ def render_internals():
                         st.graphviz_chart(dot, use_container_width=True)
                         with st.expander("View raw DOT source"):
                             st.code(dot, language="dot")
+
+                with tab_handoffs:
+                    render_handoffs(turn["query"], turn["steps"])
 
 
 # ── Save & End Session ─────────────────────────────────────────────────────────
