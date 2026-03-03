@@ -30,7 +30,8 @@ import sqlite3
 import anthropic
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "memory.sqlite")
+# Shared across all levels — one DB for the whole project
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "shared", "memory.sqlite")
 
 # ---------------------------------------------------------------------------
 # DB setup
