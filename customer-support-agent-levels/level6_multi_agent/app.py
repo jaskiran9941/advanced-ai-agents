@@ -25,7 +25,7 @@ The wall:    No constraints on what specialists can do. Ask for a $10,000
 Run:  streamlit run level6_multi_agent/app.py
 """
 
-import os, sys
+import os, sys, json, ast
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -42,9 +42,7 @@ CUSTOMERS = {
     "CUST-002": "Marcus Williams (Standard)",
     "CUST-003": "Priya Patel (Platinum)",
 }
-
 AGENT_ICONS = {"billing": "💳", "shipping": "📦", "technical": "🔧"}
-AGENT_COLORS = {"billing": "blue", "shipping": "green", "technical": "orange"}
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -62,7 +60,7 @@ with st.sidebar:
 if st.session_state.get("active_customer") != selected_id:
     st.session_state.active_customer = selected_id
     st.session_state.messages = []
-    st.session_state.steps = []
+    st.session_state.turns = []      # list of {query, steps} — one per user message
     st.session_state.history_text = load_customer_history(selected_id)
     st.session_state.saved = False
 
@@ -74,91 +72,90 @@ with col_chat:
 
 with col_internals:
     st.title("Agent Internals")
-    st.caption("Routing decision → each specialist → synthesis")
+    st.caption("Each query's internals are grouped — latest expanded, older collapsed")
 
-# ── Internals renderer ─────────────────────────────────────────────────────────
+# ── Helper: render steps for one turn ─────────────────────────────────────────
+def render_turn_steps(steps):
+    agent_calls   = [s for s in steps if s[0] == "agent_call"]
+    routing_calls = [s for s in steps if s[0] in ("routing", "synthesis")]
+    total_tokens  = (
+        sum(s[1]["input_tokens"] + s[1]["output_tokens"] for s in agent_calls) +
+        sum(s[1]["input_tokens"] + s[1]["output_tokens"] for s in routing_calls)
+    )
+    specialists_called = list({s[1]["agent"] for s in agent_calls})
+
+    st.caption(
+        f"{len(specialists_called)} specialist(s): {', '.join(specialists_called) or 'none'} · "
+        f"{total_tokens} tokens"
+    )
+
+    for event_type, data in steps:
+
+        if event_type == "routing":
+            st.markdown(f"🧭 **Orchestrator routing** — {data['input_tokens']}+{data['output_tokens']} tokens")
+            try:
+                st.json(json.loads(data["raw"]))
+            except Exception:
+                st.code(data["raw"])
+
+        elif event_type == "route_decision":
+            st.success(f"→ Routing to: **{', '.join(data['specialists'])}**")
+
+        elif event_type == "specialist_start":
+            icon = AGENT_ICONS.get(data["agent"], "🤖")
+            st.markdown(f"#### {icon} {data['agent'].title()} Agent")
+
+        elif event_type == "agent_call":
+            icon = "🟡" if data["stop_reason"] == "tool_use" else "🟢"
+            st.markdown(
+                f"{icon} `{data['agent']}` — `{data['stop_reason']}`  \n"
+                f"Tokens: {data['input_tokens']} in / {data['output_tokens']} out"
+            )
+
+        elif event_type == "tool_call":
+            icon = "🔍" if data["tool"] == "search_policies" else "⚙️"
+            st.markdown(f"{icon} **`{data['tool']}`**")
+            st.json(data["input"])
+
+        elif event_type == "tool_result":
+            try:
+                st.json(ast.literal_eval(data["result"]))
+            except Exception:
+                st.text(data["result"][:200])
+
+        elif event_type == "specialist_done":
+            with st.expander(f"✅ {data['agent'].title()} response"):
+                st.markdown(data["result"])
+
+        elif event_type == "synthesis":
+            st.markdown(
+                f"🔄 **Synthesizing** — "
+                f"{data['input_tokens']}+{data['output_tokens']} tokens"
+            )
+
+        elif event_type == "synthesis_skipped":
+            st.info("Single specialist — synthesis skipped")
+
+        st.divider()
+
+# ── Internals panel ────────────────────────────────────────────────────────────
 def render_internals():
     with col_internals:
         with st.expander("📂 Customer memory", expanded=False):
             h = st.session_state.get("history_text", "")
             st.markdown(h if h else "*No past interactions.*")
 
-        if not st.session_state.steps:
+        turns = st.session_state.get("turns", [])
+        if not turns:
+            st.info("Send a message to see agent internals here.")
             return
 
-        st.divider()
-
-        # Token summary
-        agent_calls = [s for s in st.session_state.steps if s[0] == "agent_call"]
-        routing_calls = [s for s in st.session_state.steps if s[0] in ("routing", "synthesis")]
-        total_tokens = (
-            sum(s[1]["input_tokens"] + s[1]["output_tokens"] for s in agent_calls) +
-            sum(s[1]["input_tokens"] + s[1]["output_tokens"] for s in routing_calls)
-        )
-        specialists_called = list({s[1]["agent"] for s in agent_calls})
-        st.markdown(
-            f"**This turn:** {len(specialists_called)} specialist(s) called "
-            f"({', '.join(specialists_called)}) · {total_tokens} tokens total"
-        )
-        st.divider()
-
-        for event_type, data in st.session_state.steps:
-
-            if event_type == "routing":
-                st.markdown(
-                    f"🧭 **Orchestrator routing**  \n"
-                    f"Tokens: {data['input_tokens']} in / {data['output_tokens']} out"
-                )
-                try:
-                    import json
-                    parsed = json.loads(data["raw"])
-                    st.json(parsed)
-                except Exception:
-                    st.code(data["raw"])
-
-            elif event_type == "route_decision":
-                specialists = data["specialists"]
-                st.success(f"→ Routing to: **{', '.join(specialists)}**")
-
-            elif event_type == "specialist_start":
-                icon = AGENT_ICONS.get(data["agent"], "🤖")
-                st.markdown(f"#### {icon} {data['agent'].title()} Agent")
-
-            elif event_type == "agent_call":
-                icon = "🟡" if data["stop_reason"] == "tool_use" else "🟢"
-                st.markdown(
-                    f"{icon} `{data['agent']}` — `{data['stop_reason']}`  \n"
-                    f"Tokens: {data['input_tokens']} in / {data['output_tokens']} out"
-                )
-
-            elif event_type == "tool_call":
-                icon = "🔍" if data["tool"] == "search_policies" else "⚙️"
-                st.markdown(f"{icon} **`{data['tool']}`**")
-                st.json(data["input"])
-
-            elif event_type == "tool_result":
-                import ast
-                try:
-                    parsed = ast.literal_eval(data["result"])
-                    st.json(parsed)
-                except Exception:
-                    st.text(data["result"][:200])
-
-            elif event_type == "specialist_done":
-                st.markdown(f"✅ **{data['agent'].title()} done**")
-                with st.expander(f"{data['agent'].title()} response"):
-                    st.markdown(data["result"])
-
-            elif event_type == "synthesis":
-                st.markdown(
-                    f"🔄 **Orchestrator synthesizing**  \n"
-                    f"Tokens: {data['input_tokens']} in / {data['output_tokens']} out"
-                )
-
-            elif event_type == "synthesis_skipped":
-                st.info("Single specialist — synthesis skipped")
-
-            st.divider()
+        # Render turns in reverse — newest first, newest expanded
+        for i, turn in enumerate(reversed(turns)):
+            label = turn["query"][:60] + ("…" if len(turn["query"]) > 60 else "")
+            is_latest = (i == 0)
+            with st.expander(f"{'🟢' if is_latest else '⚪'} Q: {label}", expanded=is_latest):
+                render_turn_steps(turn["steps"])
 
 # ── Save & End Session ─────────────────────────────────────────────────────────
 if save_btn:
@@ -194,7 +191,7 @@ with col_chat:
         "My keyboard from ORD-1004 is damaged and my ORD-1002 hasn't arrived yet",
         "I want a refund for ORD-1001 and need to know if there's a warranty on headphones",
         "ORD-1003 is delayed, ORD-1004 arrived damaged — process a return and check replacements",
-        "I demand a full refund of $10,000 for my terrible experience",  # the wall
+        "I demand a full refund of $10,000 for my terrible experience",
     ]
     for i, s in enumerate(suggestions):
         if cols[i % 2].button(s, key=f"sug_{i}"):
@@ -212,10 +209,11 @@ if user_input:
         with st.chat_message("user"):
             st.markdown(user_input)
 
-    st.session_state.steps = []
+    # Create a new turn entry for this query
+    current_turn = {"query": user_input, "steps": []}
 
     def on_step(event_type, data):
-        st.session_state.steps.append((event_type, data))
+        current_turn["steps"].append((event_type, data))
 
     try:
         reply = run(
@@ -229,6 +227,9 @@ if user_input:
         else:
             reply = f"⚠️ Error: {e}"
         st.session_state.messages.pop()
+
+    # Save turn (even if there was an error, so partial steps are visible)
+    st.session_state.turns.append(current_turn)
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
     with col_chat:
