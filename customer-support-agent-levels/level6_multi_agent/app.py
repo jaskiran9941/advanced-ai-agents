@@ -96,7 +96,7 @@ def build_flow_diagram(steps: list) -> str:
         edge = f'    {a} -> {b} [color="{color}" style={style}'
         if label:
             edge += f' label="  {label}  "'
-        edge += "];'
+        edge += "];"
         edges.append(edge)
 
     # ── Walk the steps in order ──────────────────────────────────────────
