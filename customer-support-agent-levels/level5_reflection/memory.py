@@ -145,6 +145,13 @@ def save_interaction(customer_id: str, messages: list) -> dict:
 
     raw = response.content[0].text.strip()
 
+    # Strip markdown code fences if Claude wrapped the JSON (e.g. ```json ... ```)
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
+
     try:
         extracted = json.loads(raw)
     except json.JSONDecodeError:
