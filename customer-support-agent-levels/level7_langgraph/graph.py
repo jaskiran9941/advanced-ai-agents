@@ -28,6 +28,7 @@ import json
 import anthropic
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
+from langchain_core.runnables import RunnableConfig
 
 from state import SupportState, APPROVAL_THRESHOLD
 from agents import billing, shipping, technical
@@ -44,7 +45,7 @@ Return ONLY JSON:
   "technical_context": "..."
 }"""
 
-def router_node(state: SupportState, config: dict) -> dict:
+def router_node(state: SupportState, config: RunnableConfig) -> dict:
     on_step = config.get("configurable", {}).get("on_step")
     client  = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"), max_retries=5)
 
@@ -92,7 +93,7 @@ def router_node(state: SupportState, config: dict) -> dict:
     }
 
 # ── Specialist nodes ───────────────────────────────────────────────────────────
-def billing_node(state: SupportState, config: dict) -> dict:
+def billing_node(state: SupportState, config: RunnableConfig) -> dict:
     on_step = config.get("configurable", {}).get("on_step")
     if "billing" not in state.get("specialists", []):
         return {}
@@ -102,7 +103,7 @@ def billing_node(state: SupportState, config: dict) -> dict:
     if on_step: on_step("specialist_done", {"agent": "billing", "result": result.get("billing_result", "")})
     return result
 
-def shipping_node(state: SupportState, config: dict) -> dict:
+def shipping_node(state: SupportState, config: RunnableConfig) -> dict:
     on_step = config.get("configurable", {}).get("on_step")
     if "shipping" not in state.get("specialists", []):
         return {}
@@ -112,7 +113,7 @@ def shipping_node(state: SupportState, config: dict) -> dict:
     if on_step: on_step("specialist_done", {"agent": "shipping", "result": result.get("shipping_result", "")})
     return result
 
-def technical_node(state: SupportState, config: dict) -> dict:
+def technical_node(state: SupportState, config: RunnableConfig) -> dict:
     on_step = config.get("configurable", {}).get("on_step")
     if "technical" not in state.get("specialists", []):
         return {}
@@ -123,7 +124,7 @@ def technical_node(state: SupportState, config: dict) -> dict:
     return result
 
 # ── Human approval node (graph pauses here) ────────────────────────────────────
-def human_approval_node(state: SupportState, config: dict) -> dict:
+def human_approval_node(state: SupportState, config: RunnableConfig) -> dict:
     """
     This node does nothing — it's a pause point.
     LangGraph interrupts BEFORE this node, serialises state to MemorySaver,
@@ -133,7 +134,7 @@ def human_approval_node(state: SupportState, config: dict) -> dict:
     return {}
 
 # ── Billing replan node (after rejection) ─────────────────────────────────────
-def billing_replan_node(state: SupportState, config: dict) -> dict:
+def billing_replan_node(state: SupportState, config: RunnableConfig) -> dict:
     on_step = config.get("configurable", {}).get("on_step")
     if on_step: on_step("billing_replan", {"reason": state.get("rejection_reason", "")})
     return billing.run_after_rejection(state, on_step=on_step)
@@ -143,7 +144,7 @@ SYNTHESIS_SYSTEM = """You are a customer support team manager at Acme Shop.
 Combine specialist responses into a single friendly, specific reply to the customer.
 Do not mention internal specialist names. Be direct — include order IDs, amounts, dates."""
 
-def synthesizer_node(state: SupportState, config: dict) -> dict:
+def synthesizer_node(state: SupportState, config: RunnableConfig) -> dict:
     on_step   = config.get("configurable", {}).get("on_step")
     client    = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"), max_retries=5)
     parts     = [f"Customer ticket:\n{state['ticket']}"]

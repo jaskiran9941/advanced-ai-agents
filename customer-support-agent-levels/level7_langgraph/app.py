@@ -21,7 +21,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 from graph import graph
-from state import APPROVAL_THRESHOLD
+from state import APPROVAL_THRESHOLD, SupportState
 from memory import load_customer_history, save_interaction
 
 st.set_page_config(page_title="Acme Shop Support — Level 7", layout="wide")
