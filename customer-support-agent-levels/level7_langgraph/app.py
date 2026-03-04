@@ -13,7 +13,7 @@ breaks, the error is inside LangGraph, not your code.
 Run:  streamlit run level7_langgraph/app.py
 """
 
-import os, sys, re, json, ast
+import os, sys, re, json, ast, uuid
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -191,8 +191,8 @@ def render_approval_gate():
                 if reject_btn:
                     rejection_reason = f"Refund of ${refund:.2f} exceeds policy limit. Offer store credit or partial refund up to $200."
 
-                # Resume the graph with human decision
-                thread_id = st.session_state.get("thread_id", "default")
+                # Resume the graph using the same thread that was paused
+                thread_id = st.session_state.get("current_thread_id", "default")
                 current_turn = st.session_state.turns[-1] if st.session_state.turns else {"query": "", "steps": []}
 
                 def on_step(event_type, data):
@@ -270,14 +270,27 @@ if user_input and not st.session_state.get("pending_approval"):
             md(user_input)
 
     current_turn = {"query": user_input, "steps": [], "final_state": None}
-    thread_id    = st.session_state.get("thread_id", "default")
+
+    # Fresh thread_id per message — prevents state bleeding from previous graph runs
+    thread_id = str(uuid.uuid4())
+    st.session_state.current_thread_id = thread_id
+
+    # Build ticket with recent conversation context so follow-ups like "1004"
+    # are understood in context of the previous message
+    recent = [m for m in st.session_state.messages[-6:]
+              if isinstance(m["content"], str) and not m["content"].startswith("[Quality")]
+    if len(recent) > 1:
+        convo = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in recent[:-1])
+        ticket_with_context = f"Conversation so far:\n{convo}\n\nLatest message: {user_input}"
+    else:
+        ticket_with_context = user_input
 
     def on_step(event_type, data):
         current_turn["steps"].append((event_type, data))
 
     config = {"configurable": {"thread_id": thread_id, "on_step": on_step}}
     initial_state: SupportState = {
-        "ticket":           user_input,
+        "ticket":           ticket_with_context,
         "customer_history": st.session_state.get("history_text", ""),
         "specialists": [], "billing_context": "", "shipping_context": "", "technical_context": "",
         "billing_result": "", "shipping_result": "", "technical_result": "",
