@@ -10,7 +10,7 @@ The internals panel has two tabs:
 Run:  streamlit run level6_multi_agent/app.py
 """
 
-import os, sys, json, ast
+import os, sys, json, ast, re
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -19,6 +19,13 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 from orchestrator import run
 from memory import load_customer_history, save_interaction
+
+
+def md(text: str):
+    """Render markdown safely — escape $ before digits so Streamlit
+    doesn't interpret currency amounts as LaTeX math delimiters."""
+    safe = re.sub(r'\$(\d)', r'\\$\1', str(text))
+    st.markdown(safe)
 
 st.set_page_config(page_title="Acme Shop Support — Level 6", layout="wide")
 
@@ -415,7 +422,7 @@ with col_chat:
         if isinstance(msg["content"], list):
             continue
         with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+            md(msg["content"])
 
 render_internals()
 
@@ -443,7 +450,7 @@ if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     with col_chat:
         with st.chat_message("user"):
-            st.markdown(user_input)
+            md(user_input)
 
     current_turn = {"query": user_input, "steps": []}
 
@@ -468,6 +475,6 @@ if user_input:
 
     with col_chat:
         with st.chat_message("assistant"):
-            st.markdown(reply)
+            md(reply)
 
     render_internals()
